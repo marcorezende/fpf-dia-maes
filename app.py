@@ -1,12 +1,12 @@
 import os
 from io import BytesIO
 
-import streamlit as st
 import requests
+import streamlit as st
+from PIL import Image
 from openai import OpenAI
 from streamlit_javascript import st_javascript
 from supabase import create_client
-from PIL import Image
 
 # === Configurações iniciais ===
 st.set_page_config(page_title="Dia das Mães - Imagem Personalizada", layout="centered")
@@ -40,21 +40,26 @@ def insert_log(_ip, memory):
 @st.cache_data
 def update_log(_ip, attempts, memory):
     supabase.table("logs").update({
-        "attempts": attempts+1,
+        "attempts": attempts + 1,
         "memory": memory
     }).eq('ip', _ip).execute()
 
-def apply_watermark(_image, watermark_image, position=(0, 0), opacity=128):
+
+def apply_watermark(_image, watermark_image, position=(0, 0)):
     watermark = Image.open(watermark_image).convert("RGBA")
+    r, g, b, a = watermark.split()
+    watermark = Image.merge("RGBA", (r, g, b, a))
 
-    if opacity < 255:
-        r, g, b, a = watermark.split()
-        a = a.point(lambda i: i * (opacity / 255))
-        watermark = Image.merge("RGBA", (r, g, b, a))
+    padding = 384
+    original_width, original_height = _image.size
+    new_height = original_height + 2 * padding
 
-    image_with_watermark = _image.copy()
-    image_with_watermark.paste(watermark, position, watermark)
-    return image_with_watermark
+    new_image = Image.new("RGBA", (original_width, new_height), (0, 0, 0, 255))
+    new_image.paste(_image, (0, padding))
+    new_image.paste(watermark, position, watermark)
+
+    return new_image
+
 
 os.environ["OPENAI_API_KEY"] = ("TOKEN")
 
@@ -76,29 +81,27 @@ if gerar and prompt.strip():
     data = log(ip)
     data = data[0] if data else None
     if data and int(data["attempts"]) >= MAX_ATTEMPTS:
+        disable = False
         st.warning("Você já alcançou o limite de imagens geradas ❤️ Obrigado por participar!")
     else:
         with st.spinner("Gerando imagem..."):
             try:
 
                 client = OpenAI()
+                prompt = 'In a 8bit animation style, reminiscent of early 21st century design principles like Final Fantasy for children.' \
+                         f'A portrait Image of {prompt}'
 
                 result = client.images.generate(
                     model="dall-e-3",
-                    size="1792x1024",
+                    size="1024x1024",
                     prompt=prompt
                 )
 
                 image_url = result.data[0].url
                 response = requests.get(image_url)
                 img = Image.open(BytesIO(response.content)).convert("RGBA")
-                image = apply_watermark(img, './watermark.png', position=(0, 0), opacity=128)
+                image = apply_watermark(img, './watermark.png')
                 st.image(image=image, caption="Sua imagem personalizada 💖", use_container_width=True)
-
-                # Compartilhamento
-                whatsapp_text = f"Olha a imagem que fiz com minha mãe! 💖 #DiaDasMães {prompt}"
-                whatsapp_link = f"https://wa.me/?text={whatsapp_text.replace(' ', '%20')}"
-                st.markdown(f"[📤 Compartilhar no WhatsApp]({whatsapp_link})")
 
                 if not data:
                     insert_log(_ip=ip, memory=prompt)

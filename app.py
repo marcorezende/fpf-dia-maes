@@ -1,3 +1,4 @@
+import base64
 import os
 from io import BytesIO
 
@@ -65,19 +66,35 @@ os.environ["OPENAI_API_KEY"] = ("TOKEN")
 
 MAX_GLOBAL_REQUESTS = 100
 
+with open("data/patrocinio.png", "rb") as img_file:
+    encoded = base64.b64encode(img_file.read()).decode()
+
+col1, col2 = st.columns([3, 1])
+
+with col1:
+    st.header('Crie uma imagem especial para sua :green[mãe]!')
+
+with col2:
+    st.image("data/bit.png", use_container_width=True)
+
 # === Interface ===
-st.title("💐 Crie uma imagem especial para sua mãe!")
 st.write(
     "Digite um momento inesquecível que você viveu com sua mãe e receba uma imagem personalizada com amor e tecnologia.")
 
 ip = st_javascript("""await fetch("https://api.ipify.org?format=json").then(r => r.json()).then(j => j.ip)""")
-prompt = st.text_area("Digite aqui o momento especial:", height=100, max_chars=248)
+prompt_user = st.text_area("Digite aqui o momento especial:", height=100, max_chars=248)
 gerar = st.button("🎁 Gerar imagem")
 
 MAX_ATTEMPTS = 1
 
+initial_prompt = f"""You are a specialist artist to a mother's day campaign you task is to
+In a 8bit animation style, reminiscent of early 21st century design principles like Final Fantasy for children.
+
+A portrait Image of: \n
+{prompt_user}"""
+
 # === Geração da Imagem ===
-if gerar and prompt.strip():
+if gerar and prompt_user.strip():
     data = log(ip)
     data = data[0] if data else None
     if data and int(data["attempts"]) >= MAX_ATTEMPTS:
@@ -88,8 +105,7 @@ if gerar and prompt.strip():
             try:
 
                 client = OpenAI()
-                prompt = 'In a 8bit animation style, reminiscent of early 21st century design principles like Final Fantasy for children.' \
-                         f'A portrait Image of {prompt}'
+                prompt = initial_prompt.format(prompt_user=prompt_user)
 
                 result = client.images.generate(
                     model="dall-e-3",
@@ -101,6 +117,15 @@ if gerar and prompt.strip():
                 response = requests.get(image_url)
                 img = Image.open(BytesIO(response.content)).convert("RGBA")
                 image = apply_watermark(img, './watermark.png')
+                img_bytes = BytesIO()
+                image.save(img_bytes, format="PNG")
+                img_bytes.seek(0)
+                st.download_button(
+                    label="📥 Baixar imagem",
+                    data=img_bytes,
+                    file_name="minha-imagem.png",
+                    mime="image/png"
+                )
                 st.image(image=image, caption="Sua imagem personalizada 💖", use_container_width=True)
 
                 if not data:
@@ -112,3 +137,22 @@ if gerar and prompt.strip():
 else:
     if gerar:
         st.warning("Por favor, digite algo antes de gerar.")
+
+st.markdown("""
+    <style>
+    .footer {
+        position: fixed;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        background-color: #4caf50;
+        color: white;
+        text-align: center;
+        padding: 10px;
+        font-size: 14px;
+    }
+    </style>
+    <div class="footer">
+        Feito com ❤️ por Vanilton, Marco Rezende e Mário Santos na FPF Tech | © 2025
+    </div>
+""", unsafe_allow_html=True)

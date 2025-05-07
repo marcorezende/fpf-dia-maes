@@ -13,6 +13,9 @@ from supabase import create_client
 st.set_page_config(page_title="Dia das Mães - Imagem Personalizada", layout="centered")
 
 
+MAX_GLOBAL_REQUESTS = 100
+MAX_ATTEMPTS = 2
+
 @st.cache_resource
 def init_connection():
     url = "SUPABASE_URL"
@@ -23,13 +26,11 @@ def init_connection():
 supabase = init_connection()
 
 
-@st.cache_data
 def log(_ip):
     response = supabase.table("logs").select("*").eq("ip", _ip).execute()
     return response.data or None
 
 
-@st.cache_data
 def insert_log(_ip, memory):
     supabase.table("logs").insert({
         "ip": _ip,
@@ -38,7 +39,6 @@ def insert_log(_ip, memory):
     }).execute()
 
 
-@st.cache_data
 def update_log(_ip, attempts, memory):
     supabase.table("logs").update({
         "attempts": attempts + 1,
@@ -64,8 +64,6 @@ def apply_watermark(_image, watermark_image, position=(0, 0)):
 
 os.environ["OPENAI_API_KEY"] = ("TOKEN")
 
-MAX_GLOBAL_REQUESTS = 100
-
 with open("data/patrocinio.png", "rb") as img_file:
     encoded = base64.b64encode(img_file.read()).decode()
 
@@ -84,8 +82,6 @@ st.write(
 ip = st_javascript("""await fetch("https://api.ipify.org?format=json").then(r => r.json()).then(j => j.ip)""")
 prompt_user = st.text_area("Digite aqui o momento especial:", height=100, max_chars=248)
 gerar = st.button("🎁 Gerar imagem")
-
-MAX_ATTEMPTS = 1
 
 initial_prompt = f"""You are a specialist artist to a mother's day campaign you task is to
 In a 8bit animation style, reminiscent of early 21st century design principles like Final Fantasy for children.
@@ -153,6 +149,6 @@ st.markdown("""
     }
     </style>
     <div class="footer">
-        Feito com ❤️ por Vanilton, Marco Rezende e Mário Santos na FPF Tech | © 2025
+        Feito com ❤️ por Vanilton Pinheiro, Marco Rezende e Mario Santos na FPF Tech | © 2025
     </div>
 """, unsafe_allow_html=True)

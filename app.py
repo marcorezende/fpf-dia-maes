@@ -160,6 +160,6 @@ st.markdown("""
     }
     </style>
     <div class="footer">
-        Feito com ❤️ por Vanilton Pinheiro, Marco Rezende e Mário Santos na FPF Tech | © 2025
+        Feito com ❤️ por Vanilton Pinheiro, Marco Rezende e Mário Santos na FPFtech | © 2025
     </div>
 """, unsafe_allow_html=True)

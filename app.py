@@ -10,7 +10,7 @@ from streamlit_javascript import st_javascript
 from supabase import create_client
 
 # === Configurações iniciais ===
-st.set_page_config(page_title="Dia das Mães - Imagem Personalizada", layout="centered")
+st.set_page_config(page_icon="data/logo.png", page_title="Dia das Mães - Imagem Personalizada", layout="centered")
 
 MAX_GLOBAL_REQUESTS = 100
 MAX_ATTEMPTS = 2
@@ -75,7 +75,7 @@ with col2:
 
 # === Interface ===
 st.write(
-    "Digite um momento inesquecível que você viveu com sua mãe e receba uma imagem personalizada com amor e tecnologia.")
+    "Digite um momento inesquecível que você viveu com sua mãe e receba uma imagem personalizada com amor e tecnologia. (Você tem 2 créditos)")
 
 ip = st_javascript("""await fetch("https://api.ipify.org?format=json").then(r => r.json()).then(j => j.ip)""")
 prompt_user = st.text_area("Digite aqui o momento especial:", height=100, max_chars=248)

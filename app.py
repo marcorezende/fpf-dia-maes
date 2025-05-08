@@ -98,48 +98,48 @@ A portrait Image of: \n
 if gerar and prompt_user.strip():
     data = log(ip)
     data = data[0] if data else None
-    # if data and int(data["attempts"]) >= MAX_ATTEMPTS:
-    #     disable = False
-    #     st.warning("Você já alcançou o limite de imagens geradas ❤️ Obrigado por participar!")
-    # else:
-    with st.spinner("Gerando imagem..."):
-        try:
+    if data and int(data["attempts"]) >= MAX_ATTEMPTS:
+        disable = False
+        st.warning("Você já alcançou o limite de imagens geradas ❤️ Obrigado por participar!")
+    else:
+        with st.spinner("Gerando imagem..."):
+            try:
 
-            client = OpenAI()
-            prompt = initial_prompt.format(prompt_user=prompt_user)
+                client = OpenAI()
+                prompt = initial_prompt.format(prompt_user=prompt_user)
 
-            result = client.images.generate(
-                model="dall-e-3",
-                size="1024x1024",
-                prompt=prompt
-            )
+                result = client.images.generate(
+                    model="dall-e-3",
+                    size="1024x1024",
+                    prompt=prompt
+                )
 
-            image_url = result.data[0].url
-            response = requests.get(image_url)
-            img = Image.open(BytesIO(response.content)).convert("RGBA")
-            image = apply_watermark(img, './watermark.png')
-            img_bytes = BytesIO()
-            image.save(img_bytes, format="PNG")
-            img_bytes.seek(0)
-            st.session_state.running = False
-            st.download_button(
-                label="📥 Baixar imagem",
-                data=img_bytes,
-                file_name="minha-imagem.png",
-                mime="image/png"
-            )
-            st.image(image=image, caption="Sua imagem personalizada 💖", use_container_width=True)
+                image_url = result.data[0].url
+                response = requests.get(image_url)
+                img = Image.open(BytesIO(response.content)).convert("RGBA")
+                image = apply_watermark(img, './watermark.png')
+                img_bytes = BytesIO()
+                image.save(img_bytes, format="PNG")
+                img_bytes.seek(0)
+                st.session_state.running = False
+                st.download_button(
+                    label="📥 Baixar imagem",
+                    data=img_bytes,
+                    file_name="minha-imagem.png",
+                    mime="image/png"
+                )
+                st.image(image=image, caption="Sua imagem personalizada 💖", use_container_width=True)
 
-            if not data:
-                insert_log(_ip=ip, memory=prompt)
-            else:
-                update_log(_ip=ip, attempts=int(data["attempts"]), memory=prompt)
-        except RateLimitError:
-            st.session_state.running = False
-            st.error("🚫 Limite de requisições por minuto excedido. Por favor, aguarde um pouco e tente novamente.")
-        except Exception as e:
-            st.session_state.running = False
-            st.error(f"Erro ao gerar imagem: {str(e)}")
+                if not data:
+                    insert_log(_ip=ip, memory=prompt)
+                else:
+                    update_log(_ip=ip, attempts=int(data["attempts"]), memory=prompt)
+            except RateLimitError:
+                st.session_state.running = False
+                st.error("🚫 Limite de requisições por minuto excedido. Por favor, aguarde um pouco e tente novamente.")
+            except Exception as e:
+                st.session_state.running = False
+                st.error(f"Erro ao gerar imagem: {str(e)}")
 
 else:
     if gerar:

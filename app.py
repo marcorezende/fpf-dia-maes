@@ -5,21 +5,21 @@ from io import BytesIO
 import requests
 import streamlit as st
 from PIL import Image
-from openai import OpenAI
+from openai import OpenAI, RateLimitError
 from streamlit_javascript import st_javascript
 from supabase import create_client
 
 # === Configurações iniciais ===
 st.set_page_config(page_title="Dia das Mães - Imagem Personalizada", layout="centered")
 
-
 MAX_GLOBAL_REQUESTS = 100
 MAX_ATTEMPTS = 2
 
+
 @st.cache_resource
 def init_connection():
-    url = "SUPABASE_URL"
-    key = "SUPABASE_SECRET_KEY"
+    url = os.getenv("SUPABASE_URL")
+    key = os.getenv("SUPABASE_SECRET_KEY")
     return create_client(url, key)
 
 
@@ -62,8 +62,6 @@ def apply_watermark(_image, watermark_image, position=(0, 0)):
     return new_image
 
 
-os.environ["OPENAI_API_KEY"] = ("TOKEN")
-
 with open("data/patrocinio.png", "rb") as img_file:
     encoded = base64.b64encode(img_file.read()).decode()
 
@@ -81,10 +79,17 @@ st.write(
 
 ip = st_javascript("""await fetch("https://api.ipify.org?format=json").then(r => r.json()).then(j => j.ip)""")
 prompt_user = st.text_area("Digite aqui o momento especial:", height=100, max_chars=248)
-gerar = st.button("🎁 Gerar imagem")
 
-initial_prompt = f"""You are a specialist artist to a mother's day campaign you task is to
+if 'run_button' in st.session_state and st.session_state.run_button is True:
+    st.session_state.running = True
+else:
+    st.session_state.running = False
+
+gerar = st.button("🎁 Gerar imagem", disabled=st.session_state.running, key='run_button')
+
+initial_prompt = f"""You are a specialist artist to a mother's day campaign your task is to
 In a 8bit animation style, reminiscent of early 21st century design principles like Final Fantasy for children.
+Remember that people's features must be Brazilian.
 
 A portrait Image of: \n
 {prompt_user}"""
@@ -93,43 +98,49 @@ A portrait Image of: \n
 if gerar and prompt_user.strip():
     data = log(ip)
     data = data[0] if data else None
-    if data and int(data["attempts"]) >= MAX_ATTEMPTS:
-        disable = False
-        st.warning("Você já alcançou o limite de imagens geradas ❤️ Obrigado por participar!")
-    else:
-        with st.spinner("Gerando imagem..."):
-            try:
+    # if data and int(data["attempts"]) >= MAX_ATTEMPTS:
+    #     disable = False
+    #     st.warning("Você já alcançou o limite de imagens geradas ❤️ Obrigado por participar!")
+    # else:
+    with st.spinner("Gerando imagem..."):
+        try:
 
-                client = OpenAI()
-                prompt = initial_prompt.format(prompt_user=prompt_user)
+            client = OpenAI()
+            prompt = initial_prompt.format(prompt_user=prompt_user)
 
-                result = client.images.generate(
-                    model="dall-e-3",
-                    size="1024x1024",
-                    prompt=prompt
-                )
+            result = client.images.generate(
+                model="dall-e-3",
+                size="1024x1024",
+                prompt=prompt
+            )
 
-                image_url = result.data[0].url
-                response = requests.get(image_url)
-                img = Image.open(BytesIO(response.content)).convert("RGBA")
-                image = apply_watermark(img, './watermark.png')
-                img_bytes = BytesIO()
-                image.save(img_bytes, format="PNG")
-                img_bytes.seek(0)
-                st.download_button(
-                    label="📥 Baixar imagem",
-                    data=img_bytes,
-                    file_name="minha-imagem.png",
-                    mime="image/png"
-                )
-                st.image(image=image, caption="Sua imagem personalizada 💖", use_container_width=True)
+            image_url = result.data[0].url
+            response = requests.get(image_url)
+            img = Image.open(BytesIO(response.content)).convert("RGBA")
+            image = apply_watermark(img, './watermark.png')
+            img_bytes = BytesIO()
+            image.save(img_bytes, format="PNG")
+            img_bytes.seek(0)
+            st.session_state.running = False
+            st.download_button(
+                label="📥 Baixar imagem",
+                data=img_bytes,
+                file_name="minha-imagem.png",
+                mime="image/png"
+            )
+            st.image(image=image, caption="Sua imagem personalizada 💖", use_container_width=True)
 
-                if not data:
-                    insert_log(_ip=ip, memory=prompt)
-                else:
-                    update_log(_ip=ip, attempts=int(data["attempts"]), memory=prompt)
-            except Exception as e:
-                st.error(f"Erro ao gerar imagem: {str(e)}")
+            if not data:
+                insert_log(_ip=ip, memory=prompt)
+            else:
+                update_log(_ip=ip, attempts=int(data["attempts"]), memory=prompt)
+        except RateLimitError:
+            st.session_state.running = False
+            st.error("🚫 Limite de requisições por minuto excedido. Por favor, aguarde um pouco e tente novamente.")
+        except Exception as e:
+            st.session_state.running = False
+            st.error(f"Erro ao gerar imagem: {str(e)}")
+
 else:
     if gerar:
         st.warning("Por favor, digite algo antes de gerar.")
@@ -149,6 +160,6 @@ st.markdown("""
     }
     </style>
     <div class="footer">
-        Feito com ❤️ por Vanilton Pinheiro, Marco Rezende e Mario Santos na FPF Tech | © 2025
+        Feito com ❤️ por Vanilton Pinheiro, Marco Rezende e Mário Santos na FPF Tech | © 2025
     </div>
 """, unsafe_allow_html=True)

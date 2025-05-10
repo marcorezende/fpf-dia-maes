@@ -68,22 +68,24 @@ with open("data/patrocinio.png", "rb") as img_file:
 col1, col2 = st.columns([3, 1])
 
 with col1:
-    st.header('Crie uma imagem especial para sua :green[mãe]!')
+    st.header('Reviva momentos únicos e especiais ao lado da sua :green[mãe], transformando emoções em memórias inesquecíveis!')
+
+    st.markdown("Afinal, as **melhores lembranças** são aquelas que criamos junto de quem desperta a nossa melhor versão. Com a tecnologia de IA desenvolvida pela **:green[FPFtech]**, cada recordação ganha vida novamente, e o melhor, com o estilo techer.")
 
 with col2:
     st.image("data/bit.png", use_container_width=True)
 
 # === Interface ===
-st.write(
-    "Digite um momento inesquecível que você viveu com sua mãe e receba uma imagem personalizada com amor e tecnologia. (Você tem 2 créditos)")
-
-ip = st_javascript("""await fetch("https://api.ipify.org?format=json").then(r => r.json()).then(j => j.ip)""")
-prompt_user = st.text_area("Digite aqui o momento especial:", height=100, max_chars=248)
 
 if 'run_button' in st.session_state and st.session_state.run_button is True:
     st.session_state.running = True
 else:
     st.session_state.running = False
+
+ip = st_javascript("""await fetch("https://api.ipify.org?format=json").then(r => r.json()).then(j => j.ip)""")
+prompt_user = st.text_area("Digite aqui o momento especial com detalhes:",
+                           placeholder="Ex: Eu menina com minha mãe, ambas de cabelos escuros, caminhando na praia.",
+                           disabled=st.session_state.running, height=100, max_chars=248)
 
 gerar = st.button("🎁 Gerar imagem", disabled=st.session_state.running, key='run_button')
 
